@@ -42,7 +42,6 @@ class Button(object):
             if not self.is_pressed():
                 self._currently_pressed = False
 
-                
 
 class LED(object):
     """Convinience class for using RaspberryPi LEDs.
@@ -96,6 +95,10 @@ MenuItem = namedtuple('MenuItem', [
 ])
 
 
+class EmptyRotateMenu(Exception):
+    pass
+
+
 class RotateMenu(object):
     """Creates a menu based on a list of MenuItems that can be
        interacted with two buttons.
@@ -114,46 +117,58 @@ class RotateMenu(object):
 
     @property
     def _curr_item(self):
-        return self._menu[self._curr_i]
+        return self._curr_menu[self._curr_i]
+
+    @property
+    def _curr_menu(self):
+        return self._menu_stack[-1]
 
     def _select_next_item(self):
-        if self._is_first:
-            self._is_first = False
-            if self._replay_first:
-                return  # Don't do anything the first round
-
         self._curr_i += 1
-        if self._curr_i == len(self._menu):
+        if self._curr_i == len(self._curr_menu):
             self._curr_i = 0
 
-    def _ok(self):
+    def ok(self):
+        if not self._menu_stack:
+            raise EmptyRotateMenu()
+
         self._curr_item.ok_fn()
         pause()
 
-    def _rotate(self):
+    def rotate(self):
+        if not self._menu_stack:
+            raise EmptyRotateMenu()
+
         self._select_next_item()
         self._curr_item.highlight_fn()
         pause()
 
+    def push_on_menu(self, menu):
+        self._menu_stack.append(menu)
+        self._curr_i = 0  # reset to the top of the menu
+
+        self._curr_item.highlight_fn()  # highlight the first item
+
+    def back(self):
+        if not self._menu_stack:
+            raise EmptyRotateMenu()
+
+        self._menu_stack.pop()
+        self._curr_i = 0
+
     def __init__(
             self,
             rotate_button_id,
-            ok_button_id,
-            menu,
-            replay_first=False):
+            ok_button_id):
         """replay_first: if True, then when you press rotate_button the
           first time, it highlights the first one. If false, it will
           highlight the second.
-
         """
-        
-        self._menu = menu[:]
-        self._curr_i = 0
-        self._rotate_button = Button(rotate_button_id, self._rotate)
-        self._ok_button = Button(ok_button_id, self._ok)
 
-        self._replay_first = replay_first
-        self._is_first = True
+        self._menu_stack = []
+        self._curr_i = 0
+        self._rotate_button = Button(rotate_button_id, self.rotate)
+        self._ok_button = Button(ok_button_id, self.ok)
 
     def listen(self):
         self._ok_button.listen()
