@@ -4,6 +4,9 @@ from collections import namedtuple
 
 import RPi.GPIO as GPIO
 
+# For DimmerLED
+PWM_FREQUENCY = 100
+
 
 class Button(object):
     """Convinience class for using RaspberryPi buttons.
@@ -35,6 +38,8 @@ class LED(object):
 
      Ex:
         led = LED(7)
+        led.off()  # start with it off
+
         led.on()
         time.sleep(.1)
         led.off()
@@ -43,13 +48,30 @@ class LED(object):
     def __init__(self, led_gpio):
         self._led_gpio = led_gpio
         GPIO.setup(self._led_gpio, GPIO.OUT)
-        self.off()  # start with it off
 
     def on(self):
         GPIO.output(self._led_gpio, True)
 
     def off(self):
         GPIO.output(self._led_gpio, False)
+
+
+# TODO: switch these to use `with`, so we can clean up when we're done
+class DimmerLED(object):
+
+    def __init__(self, led_gpio, *args, **kwargs):
+        super(DimmerLED).__init__(led_gpio, *args, **kwargs)
+        self._pwm = GPIO.PWM(self._led_gpio, PWM_FREQUENCY)
+        self._pwm.start(1)
+
+    def on(self):
+        self._pwm.ChangeDutyCycle(100)
+
+    def off(self):
+        self._pwm.ChangeDutyCycle(0)
+
+    def set_brightness(self, percent):
+        self._pwm.ChangeDutyCycle(percent)
 
 
 def pause():
