@@ -60,7 +60,8 @@ class LED(object):
 class DimmerLED(object):
 
     def __init__(self, led_gpio, *args, **kwargs):
-        super(DimmerLED).__init__(led_gpio, *args, **kwargs)
+        self._led_gpio = led_gpio
+        GPIO.setup(self._led_gpio, GPIO.OUT)
         self._pwm = GPIO.PWM(self._led_gpio, PWM_FREQUENCY)
         self._pwm.start(1)
 
