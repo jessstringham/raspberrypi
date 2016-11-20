@@ -25,13 +25,24 @@ class Button(object):
         self._callback = callback
         GPIO.setup(self._button_gpio, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
+        self._currently_pressed = False
+
     def is_pressed(self):
         return not GPIO.input(self._button_gpio)
 
     def listen(self):
-        if self.is_pressed():
-            self._callback()
+        if not self._currently_pressed:
+            if self.is_pressed():
+                self._currently_pressed = True
 
+                # The state just changed, so do something
+                self._callback()
+                time.sleep(.2)
+        else:
+            if not self.is_pressed():
+                self._currently_pressed = False
+
+                
 
 class LED(object):
     """Convinience class for using RaspberryPi LEDs.
@@ -106,6 +117,11 @@ class RotateMenu(object):
         return self._menu[self._curr_i]
 
     def _select_next_item(self):
+        if self._is_first:
+            self._is_first = False
+            if self._replay_first:
+                return  # Don't do anything the first round
+
         self._curr_i += 1
         if self._curr_i == len(self._menu):
             self._curr_i = 0
@@ -119,11 +135,25 @@ class RotateMenu(object):
         self._curr_item.highlight_fn()
         pause()
 
-    def __init__(self, rotate_button_id, ok_button_id, menu):
+    def __init__(
+            self,
+            rotate_button_id,
+            ok_button_id,
+            menu,
+            replay_first=False):
+        """replay_first: if True, then when you press rotate_button the
+          first time, it highlights the first one. If false, it will
+          highlight the second.
+
+        """
+        
         self._menu = menu[:]
         self._curr_i = 0
         self._rotate_button = Button(rotate_button_id, self._rotate)
         self._ok_button = Button(ok_button_id, self._ok)
+
+        self._replay_first = replay_first
+        self._is_first = True
 
     def listen(self):
         self._ok_button.listen()
