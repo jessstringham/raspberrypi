@@ -106,10 +106,13 @@ class RotateMenu(object):
        The second button selects the item and runs its ok_fn.
 
        Ex:
-         menu = RotateMenu(12, 17, [
+         menu = RotateMenu(12, 17)
+
+         menu.push_on_menu([
            MenuItem(foo, bar),
            MenuItem(baz, foobar),
-         ]
+           MenuItem(back, lambda: menu.back()),
+         ])
 
          while True:
            menu.listen()
